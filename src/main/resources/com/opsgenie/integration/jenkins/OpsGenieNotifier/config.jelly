@@ -1,0 +1,78 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+      <f:optionalBlock field="enable" title="Enable Sending Alerts" checked="${instance.isDisable()}">
+      <f:section title="Notification Options">
+          <f:entry title="Notify Build Start">
+              <f:checkbox field="notifyBuildStart" value="true" checked="${instance.isNotifyBuildStart()}"/>
+          </f:entry>
+
+          <f:entry title="Notify Aborted">
+              <f:checkbox field="notifyAborted" value="true" checked="${instance.isNotifyAborted()}"/>
+          </f:entry>
+
+          <f:entry title="Notify Failure">
+              <f:checkbox field="notifyFailure" value="true" checked="${instance.isNotifyFailure()}"/>
+          </f:entry>
+
+          <f:entry title="Notify Not Built">
+              <f:checkbox field="notifyNotBuilt" value="true" checked="${instance.isNotifyNotBuilt()}"/>
+          </f:entry>
+
+          <f:entry title="Notify Success">
+              <f:checkbox field="notifySuccess" value="true" checked="${instance.isNotifySuccess()}"/>
+          </f:entry>
+
+          <f:entry title="Notify Unstable">
+              <f:checkbox field="notifyUnstable" value="true" checked="${instance.isNotifyUnstable()}"/>
+          </f:entry>
+
+          <f:entry title="Notify Back To Normal">
+              <f:checkbox field="notifyBackToNormal" value="true" checked="${instance.isNotifyBackToNormal()}"/>
+          </f:entry>
+
+          <f:entry title="Notify Repeated Failure/Unstable">
+              <f:checkbox field="notifyRepeatedFailure" value="true" checked="${instance.isNotifyRepeatedFailure()}"/>
+          </f:entry>
+
+      </f:section>
+      <f:section title="Alert Options">
+              <f:entry title="Add Commit List to Alert Description When Failed/Unstable">
+                  <f:checkbox name="addCommitListToDescription" value="true" checked="${instance.isAddCommitListToDescription()}"/>
+              </f:entry>
+
+              <f:entry title="Add Failed Test List to Alert Description">
+                  <f:checkbox name="addFailedTestToDescription" value="true" checked="${instance.isAddFailedTestToDescription()}"/>
+              </f:entry>
+          <f:advanced>
+                <f:entry title="Alert Note" help="${rootURL}/plugin/slack/help-projectConfig-slackTeamDomain.html">
+                    <f:textarea field="alertNote" value="${instance.getAlertNote()}" />
+                </f:entry>
+
+                <f:entry title="Tags" help="${rootURL}/plugin/slack/help-projectConfig-slackTeamDomain.html">
+                 <f:textbox field="tags" value="${instance.getTags()}" />
+                </f:entry>
+
+                <f:entry title="Alias" help="${rootURL}/plugin/slack/help-projectConfig-slackTeamDomain.html">
+                 <f:textbox field="alias" value="${instance.getAlias()}" />
+                </f:entry>
+
+                <f:entry title="API Key" help="${rootURL}/plugin/slack/help-projectConfig-slackTeamDomain.html">
+                    <f:textbox name="apiKey" value="${instance.getApiKey()}" />
+                </f:entry>
+
+                <f:entry title="Recipients" help="${rootURL}/plugin/slack/help-projectConfig-slackTeamDomain.html">
+                    <f:textbox name="recipients" value="${instance.getRecipients()}" />
+                </f:entry>
+
+                <f:entry title="Teams" help="${rootURL}/plugin/slack/help-projectConfig-slackTeamDomain.html">
+                    <f:textbox name="teams" value="${instance.getTeams()}" />
+                </f:entry>
+
+
+
+              <f:validateButton
+                  title="${%Test Connection}" progress="${%Testing...}"
+                  method="testConnection" with="slackTeamDomain,slackToken,slackProjectRoom" />
+          </f:advanced>
+          </f:section>
+           </f:optionalBlock>
+</j:jelly>
