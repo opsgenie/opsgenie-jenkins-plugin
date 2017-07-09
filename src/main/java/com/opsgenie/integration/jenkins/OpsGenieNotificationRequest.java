@@ -2,16 +2,17 @@ package com.opsgenie.integration.jenkins;
 
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.export.Exported;
 
 /**
  * @author Omer Ozkan
  * @version 16/03/16
+ *
+ * @author kaganyildiz
+ * @version 09/07/17
  */
 public class OpsGenieNotificationRequest {
     private String apiKey;
-    private NotificationProperties notificationProperties;
+    private String apiUrl;
     private AlertProperties alertProperties;
     private AbstractBuild build;
     private BuildListener listener;
@@ -25,12 +26,12 @@ public class OpsGenieNotificationRequest {
         return this;
     }
 
-    public NotificationProperties getNotificationProperties() {
-        return notificationProperties;
+    public String getApiUrl() {
+        return apiUrl;
     }
 
-    public OpsGenieNotificationRequest setNotificationProperties(NotificationProperties notificationProperties) {
-        this.notificationProperties = notificationProperties;
+    public OpsGenieNotificationRequest setApiUrl(String apiUrl) {
+        this.apiUrl = apiUrl;
         return this;
     }
 

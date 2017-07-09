@@ -1,186 +1,223 @@
 package com.opsgenie.integration.jenkins;
 
-import com.ifountain.opsgenie.client.OpsGenieClient;
-import com.ifountain.opsgenie.client.model.alert.CreateAlertRequest;
-import com.ifountain.opsgenie.client.model.alert.CreateAlertResponse;
-import hudson.Util;
-import hudson.model.*;
-import hudson.scm.ChangeLogSet;
-import hudson.tasks.test.AbstractTestResultAction;
-import hudson.tasks.test.TestResult;
-import jenkins.model.JenkinsLocationConfiguration;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
+import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
-import java.util.*;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.Result;
+import hudson.model.User;
+import jenkins.model.JenkinsLocationConfiguration;
 
 /**
  * @author Omer Ozkan
- * @version 16/03/16
+ * @author kaganyildiz
+ * @version 09/07/17
  */
+
 public class OpsGenieNotificationService {
+    private final static String INTEGRATION_PATH = "/v1/json/jenkins";
+
+    private final org.slf4j.Logger logger = LoggerFactory.getLogger(OpsGenieNotificationService.class);
 
     private AbstractBuild build;
     private AbstractProject project;
-    private JobResult jobResult;
     private AlertProperties alertProperties;
-    private NotificationProperties notificationProperties;
-    private PrintStream logger;
-    private OpsGenieClient opsGenieClient;
-    private CreateAlertRequest createAlertRequest;
+    private PrintStream consoleOutputLogger;
+    private Map<String, Object> requestPayload;
+    private ObjectMapper mapper;
+    private OpsGenieNotificationRequest request;
 
     public OpsGenieNotificationService(OpsGenieNotificationRequest request) {
         build = request.getBuild();
         project = build.getProject();
 
-        alertProperties = request.getAlertProperties();
-        notificationProperties = request.getNotificationProperties();
-        logger = request.getListener().getLogger();
-        jobResult = JobResult.fromBuild(build);
+        this.request = request;
+        mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        requestPayload = new HashMap<>();
 
-        opsGenieClient = new OpsGenieClient();
-        createAlertRequest = new CreateAlertRequest();
-        createAlertRequest.setApiKey(request.getApiKey());
+        alertProperties = request.getAlertProperties();
+        consoleOutputLogger = request.getListener().getLogger();
     }
 
-    public boolean sendPostBuildAlert() {
-        populateCreateAlertRequestWithMandatoryFields();
-
-        HashMap<String, String> details = new HashMap<>();
-        details.put("Params", formatBuildVariables());
-        details.put("Duration", build.getDurationString());
-        details.put("Status", build.getResult().toString());
-        details.put("Url", new JenkinsLocationConfiguration().getUrl() + build.getUrl());
-
-
-        StringBuilder descriptionBuilder = new StringBuilder();
-
-        if (alertProperties.isAddCommitListToDesc()) {
-            descriptionBuilder.append(formatCommitList((build.getChangeSet())));
+    private boolean checkResponse(String res) {
+        try {
+            ResponseFromOpsGenie response = mapper.readValue(res, ResponseFromOpsGenie.class);
+            if (response.status.equals("successful")) {
+                return true;
+            } else {
+                consoleOutputLogger.println(String.format("Response status is : %s , failed", response.status));
+                logger.error(String.format("Response status is : %s , failed", response.status));
+                return false;
+            }
+        } catch (Exception e) {
+            e.printStackTrace(consoleOutputLogger);
+            logger.error("Exception while checking response" + e.getMessage());
         }
+        return !res.isEmpty();
+    }
+
+    private String sendWebhookToOpsGenie(String data) {
+        try {
+            String apiUrl = this.request.getApiUrl();
+            String apiKey = this.request.getApiKey();
+
+
+            URI inputURI = new URI(apiUrl);
+            String scheme = "https";
+            String host = apiUrl;
+            if (inputURI.isAbsolute()) {
+                scheme = inputURI.getScheme();
+                host = inputURI.getHost();
+            }
+
+            URI uri = new URIBuilder()
+                    .setScheme(scheme)
+                    .setHost(host)
+                    .setPort(9000)
+                    .setPath(INTEGRATION_PATH)
+                    .addParameter("apiKey", apiKey)
+                    .build();
+
+            HttpClient client = HttpClientBuilder.create().build();
+
+            HttpPost post = new HttpPost(uri);
+            StringEntity params = new StringEntity(data);
+            post.addHeader("content-type", "application/x-www-form-urlencoded");
+            post.setEntity(params);
+            HttpResponse response = client.execute(post);
+
+            return EntityUtils.toString(response.getEntity());
+            // TODO : check it
+        } catch (Exception e) {
+            e.printStackTrace(consoleOutputLogger);
+            logger.error("Exception while sending webhook: " + e.getMessage());
+        }
+        return "";
+    }
+
+    protected boolean sendPreBuildPayload() {
+
+        populateRequestPayloadWithMandatoryFields();
+
+        requestPayload.put("isPreBuild", "true");
+        String payload = "";
+        try {
+            payload = this.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestPayload);
+        } catch (Exception e) {
+            e.printStackTrace(consoleOutputLogger);
+            logger.error("Exception while serializing pre request:" + e.getMessage());
+        }
+        String response = sendWebhookToOpsGenie(payload);
+
+        return checkResponse(response);
+    }
+
+    protected boolean sendAfterBuildData() {
+
+        populateRequestPayloadWithMandatoryFields();
 
         if (build.getResult() == Result.FAILURE || build.getResult() == Result.UNSTABLE) {
             Set<User> culprits = build.getCulprits();
             if (!culprits.isEmpty()) {
-                details.put("Culprits", formatCulprits(culprits));
+                requestPayload.put("culprits", culprits);
             }
         }
 
-        AbstractTestResultAction testResult = build.getAction(AbstractTestResultAction.class);
-        if (testResult != null) {
-            String testSummary = String.format("Passed -> %s\nFailed -> %s\nSkipped -> %s",
-                    testResult.getTotalCount() - testResult.getFailCount() - testResult.getSkipCount(),
-                    testResult.getFailCount(),
-                    testResult.getSkipCount());
-            details.put("Test Summary", testSummary);
-
-            if (build.getResult() == Result.UNSTABLE && alertProperties.isAddFailedTestToDesc()) {
-                descriptionBuilder.append(formatFailedTests(testResult.getFailedTests()));
-            }
+        AbstractBuild previousBuild = build.getPreviousBuild();
+        if (previousBuild != null) {
+            String previousDisplayName = previousBuild.getDisplayName();
+            requestPayload.put("previousDisplayName", previousDisplayName);
+            String previousTime = previousBuild.getTimestamp().getTime().toString();
+            requestPayload.put("previousTime", previousTime);
+            String previousResult = previousBuild.getResult().toString();
+            requestPayload.put("previousStatus", previousResult);
+            String previousProjectName = previousBuild.getProject().getName();
+            requestPayload.put("previousProjectName", previousProjectName);
         }
 
-        createAlertRequest.setDetails(details);
-        createAlertRequest.setDescription(descriptionBuilder.toString());
-        return sendAlertToOpsGenie();
+        requestPayload.put("isPreBuild", "false");
+        requestPayload.put("duration", build.getDurationString());
+
+        String payload = "";
+        try {
+            payload = this.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestPayload);
+        } catch (Exception e) {
+            e.printStackTrace(consoleOutputLogger);
+            logger.error("Exception while serializing post request :" + e.getMessage());
+        }
+
+        String response = sendWebhookToOpsGenie(payload);
+        return checkResponse(response);
     }
 
-    private void populateCreateAlertRequestWithMandatoryFields() {
+    private void populateRequestPayloadWithMandatoryFields() {
+        String time = Objects.toString(build.getTimestamp().getTime());
+        requestPayload.put("time", time);
 
-        createAlertRequest.setMessage(String.format("%s (%s) [%s]", project.getName(), build.getDisplayName(),
-                jobResult.getName()));
-        createAlertRequest.setTags(splitStringWithComma(alertProperties.getTags()));
-        createAlertRequest.setRecipients(splitStringWithComma(alertProperties.getRecipients()));
-        createAlertRequest.setTeams(splitStringWithComma(alertProperties.getTeams()));
+        String projectName = project.getName();
+        requestPayload.put("projectName", projectName);
 
+        String displayName = build.getDisplayName();
+        requestPayload.put("displayName", displayName);
 
-        if (!Util.fixNull(alertProperties.getAlias()).isEmpty()) {
-            createAlertRequest.setAlias(alertProperties.getAlias());
-        }
+        String status = Objects.toString(build.getResult());
+        requestPayload.put("status", status);
 
-        if (!Util.fixNull(alertProperties.getAlertNote()).isEmpty()) {
-            createAlertRequest.setNote(alertProperties.getAlertNote());
-        }
-    }
+        String url = build.getUrl();
+        requestPayload.put("url", new JenkinsLocationConfiguration().getUrl() + url);
 
-    private boolean sendAlertToOpsGenie() {
-        if (jobResult.shouldSendAlert(notificationProperties)) {
-            try {
-                CreateAlertResponse createAlertResponse = opsGenieClient.alert().createAlert(createAlertRequest);
-                logger.println("OpsGenie Alert created id: " + createAlertResponse.getAlertId());
-                return true;
-            } catch (Exception e) {
-                logger.println("Could not create alert. Reason: " + e.getMessage());
-                e.printStackTrace(logger);
-                return false;
-            }
-        } else {
-            logger.println("Skipping OpsGenie Notification");
-            return true;
-        }
-    }
+        List<String> tags = splitStringWithComma(alertProperties.getTags());
+        requestPayload.put("tags", tags);
 
-    private String formatBuildVariables() {
-        StringBuilder buildVariablesBuilder = new StringBuilder();
-        Map<String, String> buildVariables = build.getBuildVariables();
-        for (Map.Entry<String, String> entry : buildVariables.entrySet()) {
-            buildVariablesBuilder.append(entry.getKey()).append(" -> ").append(entry.getValue()).append("\n");
-        }
-        return buildVariablesBuilder.toString();
-    }
+        List<String> teams = splitStringWithComma(alertProperties.getTeams());
+        requestPayload.put("teams", teams);
 
-    private String formatFailedTests(List<? extends TestResult> failedTests) {
-        StringBuilder descriptionBuilder = new StringBuilder();
-        descriptionBuilder.append("<h3>Failed Tests</h3>");
-        for (TestResult failedTest : failedTests) {
-            descriptionBuilder.append(String.format("<strong>%s</strong>\n", failedTest.getFullName()))
-                    .append(failedTest.getErrorDetails()).append("\n\n");
-        }
-        return descriptionBuilder.toString();
-    }
-
-    private String formatCulprits(Set<User> culprits) {
-        StringBuilder culpritsBuilder = new StringBuilder();
-        for (User culprit : culprits) {
-            culpritsBuilder.append(culprit.getFullName()).append(",");
-        }
-        return culpritsBuilder.toString();
-    }
-
-    private String formatCommitList(ChangeLogSet<? extends ChangeLogSet.Entry> changeLogSet) {
-        StringBuilder commitListBuildler = new StringBuilder();
-        commitListBuildler.append("<h3>Last Commiters</h3>");
-        if (changeLogSet.isEmptySet()) {
-            commitListBuildler.append("No changes.\n\n");
-        }
-
-        for (ChangeLogSet.Entry entry : changeLogSet) {
-            commitListBuildler
-                    .append(entry.getMsg())
-                    .append(" - <strong>")
-                    .append(entry.getAuthor().getDisplayName())
-                    .append("</strong>\n");
-        }
-        return commitListBuildler.toString();
+        String startTime = Objects.toString(build.getStartTimeInMillis());
+        requestPayload.put("startTimeInMillis", startTime);
     }
 
     private List<String> splitStringWithComma(String unparsed) {
         if (unparsed == null) {
             return Collections.emptyList();
         }
-        return Arrays.asList(unparsed.split(","));
+        return Arrays.asList(unparsed.trim().split(","));
     }
 
-    public boolean sendPreBuildAlert() {
-        CauseAction causeAction = build.getAction(CauseAction.class);
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ResponseFromOpsGenie {
 
-        StringBuilder descriptionBuilder = new StringBuilder();
+        @JsonProperty("status")
+        private String status;
 
-        for (Cause cause : causeAction.getCauses()) {
-            descriptionBuilder.append(cause.getShortDescription()).append("\n");
+        public String getStatus() {
+            return status;
         }
 
-        createAlertRequest.setMessage(String.format("%s (%s) [started]", project.getName(), build.getDisplayName()));
-        createAlertRequest.setDescription(descriptionBuilder.toString());
-        return sendAlertToOpsGenie();
+        public void setStatus(String status) {
+            this.status = status;
+        }
     }
-
 }
