@@ -1,10 +1,9 @@
 package com.opsgenie.integration.jenkins;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
+import hudson.scm.ChangeLogSet;
+import hudson.tasks.test.AbstractTestResultAction;
+import hudson.tasks.test.TestResult;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -12,6 +11,10 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.codehaus.jackson.annotate.JsonProperty;
+import org.codehaus.jackson.map.DeserializationConfig;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
@@ -55,7 +58,8 @@ public class OpsGenieNotificationService {
 
         this.request = request;
         mapper = new ObjectMapper();
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.configure(DeserializationConfig.Feature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        //mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         requestPayload = new HashMap<>();
 
         alertProperties = request.getAlertProperties();
@@ -93,6 +97,7 @@ public class OpsGenieNotificationService {
                 host = inputURI.getHost();
             }
 
+            // TODO : delete port
             URI uri = new URIBuilder()
                     .setScheme(scheme)
                     .setHost(host)
@@ -110,7 +115,6 @@ public class OpsGenieNotificationService {
             HttpResponse response = client.execute(post);
 
             return EntityUtils.toString(response.getEntity());
-            // TODO : check it
         } catch (Exception e) {
             e.printStackTrace(consoleOutputLogger);
             logger.error("Exception while sending webhook: " + e.getMessage());
@@ -135,6 +139,42 @@ public class OpsGenieNotificationService {
         return checkResponse(response);
     }
 
+    private String formatCommitList(ChangeLogSet<? extends ChangeLogSet.Entry> changeLogSet) {
+        StringBuilder commitListBuildler = new StringBuilder();
+        commitListBuildler.append("<h3>Last Commiters</h3>");
+        if (changeLogSet.isEmptySet()) {
+            commitListBuildler.append("No changes.\n\n");
+        }
+
+        for (ChangeLogSet.Entry entry : changeLogSet) {
+            commitListBuildler
+                    .append(entry.getMsg())
+                    .append(" - <strong>")
+                    .append(entry.getAuthor().getDisplayName())
+                    .append("</strong>\n");
+        }
+        return commitListBuildler.toString();
+    }
+
+    private String formatFailedTests(List<? extends TestResult> failedTests) {
+        StringBuilder descriptionBuilder = new StringBuilder();
+        descriptionBuilder.append("<h3>Failed Tests</h3>");
+        for (TestResult failedTest : failedTests) {
+            descriptionBuilder.append(String.format("<strong>%s</strong>\n", failedTest.getFullName()))
+                    .append(failedTest.getErrorDetails()).append("\n\n");
+        }
+        return descriptionBuilder.toString();
+    }
+
+    private String formatBuildVariables() {
+        StringBuilder buildVariablesBuilder = new StringBuilder();
+        Map<String, String> buildVariables = build.getBuildVariables();
+        for (Map.Entry<String, String> entry : buildVariables.entrySet()) {
+            buildVariablesBuilder.append(entry.getKey()).append(" -> ").append(entry.getValue()).append("\n");
+        }
+        return buildVariablesBuilder.toString();
+    }
+
     protected boolean sendAfterBuildData() {
 
         populateRequestPayloadWithMandatoryFields();
@@ -146,6 +186,23 @@ public class OpsGenieNotificationService {
             }
         }
 
+        StringBuilder descriptionBuilder = new StringBuilder();
+        AbstractTestResultAction testResult = build.getAction(AbstractTestResultAction.class);
+        if (testResult != null) {
+            String passedTestCount = new Integer(testResult.getTotalCount() - testResult.getFailCount() - testResult.getSkipCount()).toString() ;
+            requestPayload.put("passedTestCount", passedTestCount);
+            String failedTestCount = new Integer(testResult.getFailCount()).toString();
+            requestPayload.put("failedTestCount", failedTestCount);
+            String skippedTestCount = new Integer(testResult.getSkipCount() ).toString();
+            requestPayload.put("skippedTestCount", skippedTestCount);
+
+            if (build.getResult() == Result.UNSTABLE || build.getResult() == Result.FAILURE) {
+                descriptionBuilder.append(formatFailedTests(testResult.getFailedTests()));
+                requestPayload.put("failedTests", descriptionBuilder);
+            }
+        }
+
+        requestPayload.put("commitList", formatCommitList(build.getChangeSet()));
         AbstractBuild previousBuild = build.getPreviousBuild();
         if (previousBuild != null) {
             String previousDisplayName = previousBuild.getDisplayName();
@@ -160,6 +217,7 @@ public class OpsGenieNotificationService {
 
         requestPayload.put("isPreBuild", "false");
         requestPayload.put("duration", build.getDurationString());
+        requestPayload.put("params", formatBuildVariables());
 
         String payload = "";
         try {
