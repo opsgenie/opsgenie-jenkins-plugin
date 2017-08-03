@@ -25,7 +25,7 @@ public enum  AlertPriority {
 
     public static AlertPriority fromDisplayName(String value) {
         for (AlertPriority priority : AlertPriority.values()) {
-            if (priority.getDisplayName().equals(value)) {
+            if (priority.getValue().equals(value)) {
                 return priority;
             }
         }
