@@ -24,7 +24,10 @@ import java.io.IOException;
  * @version 09/07/17
  */
 public class OpsGenieNotifier extends Notifier {
+    public static final AlertPriority[] ALERT_PRIORITIES = AlertPriority.values();
+
     private static final String DEFAULT_API_URL = "https://api.opsgenie.com/";
+
 
     private boolean enable = true;
     private String tags;
@@ -33,6 +36,8 @@ public class OpsGenieNotifier extends Notifier {
     private String apiKey;
     private String apiUrl;
     private String teams;
+    private AlertPriority alertPriority;
+    private AlertPriority notifyBuildStartPriority;
 
     @DataBoundConstructor
     public OpsGenieNotifier(boolean enable,
@@ -40,13 +45,17 @@ public class OpsGenieNotifier extends Notifier {
                             String tags,
                             String apiKey,
                             String apiUrl,
-                            String teams) {
+                            String teams,
+                            String alertPriority,
+                            String buildStartAlertPriority) {
         this.enable = enable;
         this.notifyBuildStart = notifyBuildStart;
         this.tags = tags;
         this.apiKey = apiKey;
         this.apiUrl = apiUrl;
         this.teams = teams;
+        this.alertPriority = AlertPriority.fromDisplayName(alertPriority);
+        this.notifyBuildStartPriority = AlertPriority.fromDisplayName(buildStartAlertPriority);
     }
 
     @Override
@@ -75,10 +84,11 @@ public class OpsGenieNotifier extends Notifier {
         String tagsGiven = Util.fixNull(tags).isEmpty() ? getDescriptor().getTags() : tags;
         String teamsGiven = Util.fixNull(teams).isEmpty() ? getDescriptor().getTeams() : teams;
 
-        AlertProperties alertProperties =
-                new AlertProperties()
-                        .setTags(tagsGiven)
-                        .setTeams(teamsGiven);
+        AlertProperties alertProperties = new AlertProperties()
+                .setTags(tagsGiven)
+                .setTeams(teamsGiven)
+                .setPriority(alertPriority)
+                .setBuildStartPriority(notifyBuildStartPriority);
 
         String apiKeyGiven = Util.fixNull(apiKey).isEmpty() ? getDescriptor().getApiKey() : apiKey;
         String apiUrlGiven = Util.fixNull(apiUrl).isEmpty() ? getDescriptor().getApiUrl() : apiUrl;
@@ -143,6 +153,16 @@ public class OpsGenieNotifier extends Notifier {
     @Exported
     public String getTeams() {
         return teams;
+    }
+
+    @Exported
+    public AlertPriority getNotifyBuildStartPriority() {
+        return notifyBuildStartPriority;
+    }
+
+    @Exported
+    public AlertPriority getAlertPriority() {
+        return alertPriority;
     }
 
     @Extension

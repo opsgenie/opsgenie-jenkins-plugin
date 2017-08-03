@@ -131,6 +131,11 @@ public class OpsGenieNotificationService {
         populateRequestPayloadWithMandatoryFields();
 
         requestPayload.put("isPreBuild", "true");
+
+        if(alertProperties.getBuildStartPriority() != null) {
+            requestPayload.put("priority", alertProperties.getBuildStartPriority().getValue());
+        }
+
         String payload = "";
         try {
             payload = this.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestPayload);
@@ -226,6 +231,10 @@ public class OpsGenieNotificationService {
         requestPayload.put("duration", build.getDurationString());
         requestPayload.put("params", formatBuildVariables());
 
+        if(alertProperties.getPriority() != null) {
+            requestPayload.put("priority", alertProperties.getPriority().getValue());
+        }
+
         String payload = "";
         try {
             payload = this.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(requestPayload);
@@ -271,6 +280,9 @@ public class OpsGenieNotificationService {
 
         String startTime = Objects.toString(build.getStartTimeInMillis());
         requestPayload.put("startTimeInMillis", startTime);
+
+
+
     }
 
     private List<String> splitStringWithComma(String unparsed) {

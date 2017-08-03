@@ -9,30 +9,15 @@ package com.opsgenie.integration.jenkins;
  */
 public class AlertProperties {
     private String tags;
-    private String alias;
-    private boolean addCommitListToDesc;
-    private boolean addFailedTestToDesc;
     private String teams;
+    private AlertPriority priority;
+    private AlertPriority buildStartPriority;
 
     public AlertProperties setTags(String tags) {
         this.tags = tags;
         return this;
     }
 
-    public AlertProperties setAlias(String alias) {
-        this.alias = alias;
-        return this;
-    }
-
-    public AlertProperties setAddCommitListToDesc(boolean addCommitListToDesc) {
-        this.addCommitListToDesc = addCommitListToDesc;
-        return this;
-    }
-
-    public AlertProperties setAddFailedTestToDesc(boolean addFailedTestToDesc) {
-        this.addFailedTestToDesc = addFailedTestToDesc;
-        return this;
-    }
 
     public AlertProperties setTeams(String teams) {
         this.teams = teams;
@@ -43,19 +28,25 @@ public class AlertProperties {
         return tags;
     }
 
-    public String getAlias() {
-        return alias;
-    }
-
-    public boolean isAddCommitListToDesc() {
-        return addCommitListToDesc;
-    }
-
-    public boolean isAddFailedTestToDesc() {
-        return addFailedTestToDesc;
-    }
-
     public String getTeams() {
         return teams;
+    }
+
+    public AlertPriority getPriority() {
+        return priority;
+    }
+
+    public AlertProperties setPriority(AlertPriority priority) {
+        this.priority = priority;
+        return this;
+    }
+
+    public AlertPriority getBuildStartPriority() {
+        return buildStartPriority;
+    }
+
+    public AlertProperties setBuildStartPriority(AlertPriority buildStartPriority) {
+        this.buildStartPriority = buildStartPriority;
+        return this;
     }
 }
