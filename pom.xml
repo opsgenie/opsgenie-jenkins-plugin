@@ -11,7 +11,7 @@
     </parent>
     <groupId>com.opsgenie.integration</groupId>
     <artifactId>opsgenie-notification</artifactId>
-    <name>OpsGenie Notification Plugin</name>
+    <name>OpsGenie</name>
     <description>A build status publisher for OpsGenie users that notifies who is on call.</description>
     <version>1.0-SNAPSHOT</version>
     <packaging>hpi</packaging>
@@ -23,12 +23,10 @@
         <jenkins-test-harness.version>2.1</jenkins-test-harness.version>
     </properties>
 
-
-
     <licenses>
         <license>
-            <name>MIT License</name>
-            <url>http://opensource.org/licenses/MIT</url>
+            <name>Apache License</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
         </license>
     </licenses>
 
@@ -37,6 +35,11 @@
             <id>omerozkan</id>
             <name>Ömer Özkan</name>
             <email>omer@opsgenie.com</email>
+        </developer>
+        <developer>
+            <id>kaganyildiz</id>
+            <name>Kagan Yildiz</name>
+            <email>kagan@opsgenie.com</email>
         </developer>
     </developers>
     <scm>
