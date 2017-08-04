@@ -6,10 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import hudson.scm.ChangeLogSet;
-import hudson.tasks.test.AbstractTestResultAction;
-import hudson.tasks.test.TestResult;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -22,7 +18,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
 import java.net.URI;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +30,9 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Result;
 import hudson.model.User;
+import hudson.scm.ChangeLogSet;
+import hudson.tasks.test.AbstractTestResultAction;
+import hudson.tasks.test.TestResult;
 import jenkins.model.JenkinsLocationConfiguration;
 
 /**
@@ -280,16 +279,20 @@ public class OpsGenieNotificationService {
 
         String startTime = Objects.toString(build.getStartTimeInMillis());
         requestPayload.put("startTimeInMillis", startTime);
-
-
-
     }
 
     private List<String> splitStringWithComma(String unparsed) {
         if (unparsed == null) {
             return Collections.emptyList();
         }
-        return Arrays.asList(unparsed.trim().split(","));
+
+        ArrayList<String> tokens = new ArrayList<>();
+
+        for (String token : unparsed.trim().split(",")) {
+            tokens.add(token.trim());
+        }
+
+        return tokens;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

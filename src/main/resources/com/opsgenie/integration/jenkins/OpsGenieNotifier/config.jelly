@@ -19,10 +19,6 @@
                    <f:entry title="Teams" field="teams">
                        <f:textbox name="teams" value="${instance.getTeams()}" />
                    </f:entry>
-                  <f:entry title="OpsGenie API Url" field="apiUrl">
-                        <f:textbox name="apiUrl" value="${instance.getApiUrl()}" />
-                 </f:entry>
-
                 <f:entry title="Priority" field="alertPriority">
                      <select class="setting-input" name="alertPriority">
                          <j:forEach var="i" items="${instance.ALERT_PRIORITIES}">
@@ -38,6 +34,10 @@
                           </j:forEach>
                       </select>
                   </f:entry>
+
+                    <f:entry title="OpsGenie API Url" field="apiUrl">
+                          <f:textbox name="apiUrl" value="${instance.getApiUrl()}" />
+                   </f:entry>
 
              </f:advanced>
 </j:jelly>
