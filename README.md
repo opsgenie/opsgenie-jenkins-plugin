@@ -1,7 +1,7 @@
 OpsGenie plugin for Jenkins
 ------------------------
 
-Provides Jenkins notification integration with OpsGenie . For more information [OpsGenie Jenkins Integration Documentation](https://docs.opsgenie.com/docs/integrations/jenkins-integration) 
+Provides Jenkins integration with OpsGenie. For more information, please refer to [OpsGenie Jenkins Integration Documentation](https://docs.opsgenie.com/docs/integrations/jenkins-integration) 
 
 # Install Instructions for OpsGenie
 
