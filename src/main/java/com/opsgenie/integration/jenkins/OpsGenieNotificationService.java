@@ -99,11 +99,9 @@ public class OpsGenieNotificationService {
                 host = inputURI.getHost();
             }
 
-            // TODO : delete port
             URI uri = new URIBuilder()
                     .setScheme(scheme)
                     .setHost(host)
-                    .setPort(9000)
                     .setPath(INTEGRATION_PATH)
                     .addParameter("apiKey", apiKey)
                     .build();
@@ -220,10 +218,15 @@ public class OpsGenieNotificationService {
             requestPayload.put("previousDisplayName", previousDisplayName);
             String previousTime = previousBuild.getTimestamp().getTime().toString();
             requestPayload.put("previousTime", previousTime);
-            String previousResult = previousBuild.getResult().toString();
-            requestPayload.put("previousStatus", previousResult);
-            String previousProjectName = previousBuild.getProject().getName();
-            requestPayload.put("previousProjectName", previousProjectName);
+            Result previousResult = previousBuild.getResult();
+            if(previousResult != null){
+                requestPayload.put("previousStatus", previousResult.toString());
+            }
+            AbstractProject previousProject = previousBuild.getProject();
+            if(previousProject != null){
+                String previousProjectName = previousProject.getName();
+                requestPayload.put("previousProjectName", previousProjectName);
+            }
         }
 
         requestPayload.put("isPreBuild", "false");
