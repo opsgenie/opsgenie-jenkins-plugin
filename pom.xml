@@ -12,7 +12,7 @@
     <artifactId>opsgenie</artifactId>
     <name>OpsGenie Plugin</name>
     <description>A build status publisher for OpsGenie users that notifies who is on call.</description>
-    <version>1.1</version>
+    <version>1.1-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <url>https://docs.opsgenie.com/docs/integrations/jenkins-integration</url>
 
@@ -46,7 +46,7 @@
         <connection>scm:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
         <developerConnection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
-      <tag>opsgenie-1.2</tag>
+      <tag>opsgenie-1.1</tag>
   </scm>
     <repositories>
         <repository>
