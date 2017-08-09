@@ -165,7 +165,7 @@ public class OpsGenieNotificationService {
         StringBuilder testResultBuilder = new StringBuilder();
         for (TestResult failedTest : failedTests) {
             testResultBuilder
-                    .append(String.format("<strong>%s</strong>\n", failedTest.getFullName()));
+                    .append(String.format("<strong>%s</strong>%n", failedTest.getFullName()));
 
             if (StringUtils.isNotBlank(failedTest.getErrorDetails())) {
                 testResultBuilder.append(failedTest.getErrorDetails());
