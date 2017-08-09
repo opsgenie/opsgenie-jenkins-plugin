@@ -13,7 +13,7 @@
     <description>A build status publisher for OpsGenie users that notifies who is on call.</description>
     <version>1.2-SNAPSHOT</version>
     <packaging>hpi</packaging>
-    <url>https://docs.opsgenie.com/docs/integrations/jenkins-integration</url>
+    <url>https://wiki.jenkins.io/display/JENKINS/OpsGenie+Plugin</url>
 
     <properties>
         <jetty.version>9.2.15.v20160210</jetty.version>
