@@ -44,7 +44,7 @@
     </developers>
     <scm>
         <connection>scm:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
-        <developerConnection>scm:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
+        <developerConnection>scm:git:https://github.com/jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
         <tag>opsgenie-1.0</tag>
     </scm>
