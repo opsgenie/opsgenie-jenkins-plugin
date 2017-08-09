@@ -8,7 +8,6 @@
         <version>2.11</version>
         <relativePath />
     </parent>
-    <groupId>com.opsgenie.integration</groupId>
     <artifactId>opsgenie</artifactId>
     <name>OpsGenie Plugin</name>
     <description>A build status publisher for OpsGenie users that notifies who is on call.</description>
