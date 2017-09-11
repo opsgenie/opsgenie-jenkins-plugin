@@ -16,7 +16,9 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.PrintStream;
+import java.net.ConnectException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -70,7 +72,7 @@ public class OpsGenieNotificationService {
     private boolean checkResponse(String res) {
         try {
             ResponseFromOpsGenie response = mapper.readValue(res, ResponseFromOpsGenie.class);
-            if (response.status.equals("successful")) {
+            if (response.getCode()/100 == 2) {
                 consoleOutputLogger.println("Sending job data to OpsGenie is done");
                 return true;
             } else {
@@ -85,6 +87,22 @@ public class OpsGenieNotificationService {
         return !res.isEmpty();
     }
 
+    private HttpResponse establishConnection(HttpPost post, int counter) throws ConnectException{
+        HttpClient client = HttpClientBuilder.create().build();
+        try {
+            HttpResponse response = client.execute(post);
+            return response;
+        } catch (IOException e) {
+            // connection failed, try again.
+            if (counter == 10) {
+                throw new ConnectException();
+            }
+            try { Thread.sleep(1000); } catch (InterruptedException ignore) {};
+
+            establishConnection(post, ++counter);
+        }
+        throw new ConnectException();
+    }
     private String sendWebhookToOpsGenie(String data) {
         try {
             String apiUrl = this.request.getApiUrl();
@@ -106,14 +124,13 @@ public class OpsGenieNotificationService {
                     .addParameter("apiKey", apiKey)
                     .build();
 
-            HttpClient client = HttpClientBuilder.create().build();
 
             HttpPost post = new HttpPost(uri);
             StringEntity params = new StringEntity(data);
             post.addHeader("content-type", "application/x-www-form-urlencoded");
             post.setEntity(params);
             consoleOutputLogger.println("Sending job data to OpsGenie...");
-            HttpResponse response = client.execute(post);
+            HttpResponse response = establishConnection(post, 0);
 
             return EntityUtils.toString(response.getEntity());
         } catch (Exception e) {
@@ -303,6 +320,17 @@ public class OpsGenieNotificationService {
 
         @JsonProperty("status")
         private String status;
+
+        @JsonProperty("code")
+        private int code;
+
+        public int getCode() {
+            return code;
+        }
+
+        public void setCode(int code) {
+            this.code = code;
+        }
 
         public String getStatus() {
             return status;
