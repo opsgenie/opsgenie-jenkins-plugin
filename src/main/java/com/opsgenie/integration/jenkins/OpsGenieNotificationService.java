@@ -94,16 +94,16 @@ public class OpsGenieNotificationService {
             return response;
         } catch (IOException e) {
             // connection failed, try again.
-            if (counter == 10) {
+            if (counter == 3) {
                 throw new ConnectException();
             }
-            try { Thread.sleep(1000); } catch (InterruptedException ignore) {};
+            try { Thread.sleep(1000 * ++counter); } catch (InterruptedException ignore) {};
 
-            establishConnection(post, ++counter);
+            establishConnection(post, counter);
         }
         throw new ConnectException();
     }
-    private String sendWebhookToOpsGenie(String data) {
+    private String sendWebhookToOpsGenie(String data) throws ConnectException {
         try {
             String apiUrl = this.request.getApiUrl();
             String apiKey = this.request.getApiKey();
@@ -157,8 +157,14 @@ public class OpsGenieNotificationService {
             e.printStackTrace(consoleOutputLogger);
             logger.error("Exception while serializing pre request:" + e.getMessage());
         }
-        String response = sendWebhookToOpsGenie(payload);
-
+        String response = "";
+        try {
+            response = sendWebhookToOpsGenie(payload);
+        } catch (ConnectException ex) {
+            ex.printStackTrace(consoleOutputLogger);
+            logger.error("Connection has not established: " + ex.getMessage());
+            return false;
+        }
         return checkResponse(response);
     }
 
@@ -261,8 +267,14 @@ public class OpsGenieNotificationService {
             e.printStackTrace(consoleOutputLogger);
             logger.error("Exception while serializing post request :" + e.getMessage());
         }
-
-        String response = sendWebhookToOpsGenie(payload);
+        String response = "";
+        try {
+            response = sendWebhookToOpsGenie(payload);
+        } catch (ConnectException ex) {
+            ex.printStackTrace(consoleOutputLogger);
+            logger.error("Connection has not established: " + ex.getMessage());
+            return false;
+        }
         return checkResponse(response);
     }
 
